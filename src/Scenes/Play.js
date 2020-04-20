@@ -12,10 +12,17 @@ class Play extends Phaser.Scene{
         //load spritesheet
         this.load.spritesheet('explosion', './assets/explosion.png', 
         {frameWidth: 64, frameHeight: 32, startFrame: 0, endFrame: 9});
+        
+        //load music
+        this.load.audio('bgMusic', 'assets/ADarkWinter.mp3');
     }
 
     create() {
         this.add.text(20, 20, "Rocket Patrol Play");
+
+        //play music
+        var music = this.sound.add('bgMusic');
+        music.play( {loop:true} );
 
         //place the sprite
         this.starfield = this.add.tileSprite(0, 0, 640, 480, 'starfield').setOrigin(0,0);
@@ -42,7 +49,8 @@ class Play extends Phaser.Scene{
         keyF = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
         keyLEFT = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
         keyRIGHT = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
-        
+        var pointer = this.input.activePointer;
+
         //animation config
         this.anims.create({
             key: 'explode',
@@ -54,7 +62,7 @@ class Play extends Phaser.Scene{
         this.p1Score = 0;
 
         // score display
-        let scoreConfig = {
+        this.scoreConfig = {
             fontFamily: 'Courier',
             fontSize: '28px',
             backgroundColor: '#F3B141',
@@ -66,11 +74,27 @@ class Play extends Phaser.Scene{
             },
             fixedWidth: 100
         }
-        this.scoreLeft = this.add.text(69, 54, this.p1Score, scoreConfig);
-   
+        this.scoreLeft = this.add.text(69, 54, this.p1Score, this.scoreConfig);
+        
+        //time display
+        let timeConfig = {
+            fontFamily: 'Courier',
+            fontSize: '28px',
+            backgroundColor: '#F3B141',
+            color: '#843605',
+            align: 'right',
+            padding: {
+                top: 5,
+                bottom: 5,
+            },
+            fixedWidth: 100
+        }
+        this.timeRight = this.add.text(480, 54, 60, timeConfig);
+
         // game over flag
         this.gameOver = false;
 
+        /*
         // 60-second play clock
         scoreConfig.fixedWidth = 0;
         this.clock = this.time.delayedCall(60000, () => {
@@ -78,9 +102,29 @@ class Play extends Phaser.Scene{
             this.add.text(game.config.width/2, game.config.height/2 + 64, '(F)ire to Restart', scoreConfig).setOrigin(0.5);
             this.gameOver = true;
         }, null, this);
+        */
+        //speed increase at 30sec
+        this.speedIncrease = this.time.delayedCall(30000, () => {
+            this.ship01.speed += 2.5;
+            this.ship02.speed += 2.5;
+            this.ship03.speed += 2.5;
+        }, null, this);   
     }
 
     update() {
+        console.log(this.p1rocket.x);
+        //game over at timeout
+        if(this.timeRight.text <= 0) {
+            this.scoreConfig.fixedWidth = 0;
+            this.add.text(game.config.width/2, game.config.height/2, 'GAME OVER', this.scoreConfig).setOrigin(0.5);
+            this.add.text(game.config.width/2, game.config.height/2 + 64, '(F)ire to Restart', this.scoreConfig).setOrigin(0.5);
+            this.gameOver = true;
+        }
+        else {
+            //update timer
+            this.timeRight.text = 60 - Math.floor(this.time.now/1000) + this.p1Score/10;
+        }
+
         //check key input for restart
         if (this.gameOver && Phaser.Input.Keyboard.JustDown(keyF)) {
             this.scene.restart(this.p1score);
@@ -109,6 +153,11 @@ class Play extends Phaser.Scene{
             this.p1rocket.reset();
             this.shipExplode(this.ship01);
         }
+
+        //move rocket with mouse pointer
+        this.input.on('pointermove', function (pointer) {
+            this.p1rocket.x = Phaser.Math.Clamp(pointer.x, 47, 578);
+        }, this);
     }
 
     checkCollision(rocket, ship) {
@@ -138,6 +187,6 @@ class Play extends Phaser.Scene{
 
         // score increment and repaint
         this.p1Score += ship.points;
-        this.scoreLeft.text = this.p1Score;    
+        this.scoreLeft.text = this.p1Score; 
     }
 }
